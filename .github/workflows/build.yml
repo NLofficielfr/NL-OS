@@ -1,0 +1,42 @@
+name: Build NL OS Alpha
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt update
+          sudo apt install -y xorriso isolinux syslinux-utils squashfs-tools
+
+      - name: Create ISO structure
+        run: |
+          mkdir -p iso-root/nl-os
+          cp -R nl-os/* iso-root/nl-os/
+          cat > iso-root/README.txt <<'TXT'
+          NL OS Alpha
+          Experimental bootable ISO structure.
+          This is the first generated artifact.
+          TXT
+
+      - name: Build simple ISO
+        run: |
+          xorriso -as mkisofs \
+            -o NL-OS-Alpha.iso \
+            -V "NL_OS_ALPHA" \
+            iso-root
+
+      - name: Upload ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL-OS-Alpha
+          path: NL-OS-Alpha.iso

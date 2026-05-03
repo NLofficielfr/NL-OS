@@ -7,36 +7,60 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install build tools
+      - name: Install Cubic alternative tools
         run: |
           sudo apt update
-          sudo apt install -y xorriso isolinux syslinux-utils squashfs-tools
+          sudo apt install -y \
+            xorriso \
+            squashfs-tools \
+            isolinux \
+            syslinux-utils \
+            wget \
+            curl \
+            rsync
 
-      - name: Create ISO structure
+      - name: Download Ubuntu base ISO
         run: |
-          mkdir -p iso-root/nl-os
-          cp -R nl-os/* iso-root/nl-os/
-          cat > iso-root/README.txt <<'TXT'
+          wget -O ubuntu.iso https://releases.ubuntu.com/24.04.2/ubuntu-24.04.2-live-server-amd64.iso
+
+      - name: Prepare NL OS files
+        run: |
+          mkdir -p nl-layer/opt/nl-os
+          cp -R nl-os/* nl-layer/opt/nl-os/
+          cat > nl-layer/opt/nl-os/NL-OS-INFO.txt <<'TXT'
           NL OS Alpha
-          Experimental bootable ISO structure.
-          This is the first generated artifact.
+          Base: Ubuntu 24.04
+          Edition: Experimental
           TXT
 
-      - name: Build simple ISO
+      - name: Package NL layer
         run: |
-          xorriso -as mkisofs \
-            -o NL-OS-Alpha.iso \
-            -V "NL_OS_ALPHA" \
-            iso-root
+          tar -czf nl-layer.tar.gz -C nl-layer .
 
-      - name: Upload ISO
+      - name: Create release ISO artifact placeholder
+        run: |
+          mkdir -p output
+          cp ubuntu.iso output/NL-OS-Alpha-Ubuntu-Base.iso
+          cp nl-layer.tar.gz output/nl-layer.tar.gz
+          cat > output/README.txt <<'TXT'
+          NL OS Alpha package.
+
+          This build contains:
+          - Ubuntu 24.04 base ISO
+          - NL OS custom layer archive
+
+          Next step:
+          integrate NL layer directly into the live filesystem.
+          TXT
+
+      - name: Upload NL OS package
         uses: actions/upload-artifact@v4
         with:
-          name: NL-OS-Alpha
-          path: NL-OS-Alpha.iso
+          name: NL-OS-Alpha-Package
+          path: output/

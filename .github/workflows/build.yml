@@ -1,4 +1,4 @@
-name: Build NL OS Alpha
+name: Build Real Bootable NL OS
 
 on:
   workflow_dispatch:
@@ -13,54 +13,144 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Cubic alternative tools
+      - name: Install live-build
         run: |
           sudo apt update
-          sudo apt install -y \
-            xorriso \
-            squashfs-tools \
-            isolinux \
-            syslinux-utils \
-            wget \
-            curl \
-            rsync
+          sudo apt install -y live-build
 
-      - name: Download Ubuntu base ISO
+      - name: Prepare live-build config
         run: |
-          wget -O ubuntu.iso https://releases.ubuntu.com/24.04.2/ubuntu-24.04.2-live-server-amd64.iso
+          mkdir -p live
+          cd live
 
-      - name: Prepare NL OS files
+          lb config \
+            --distribution bookworm \
+            --archive-areas "main contrib non-free non-free-firmware" \
+            --binary-images iso-hybrid \
+            --debian-installer live \
+            --bootappend-live "boot=live components quiet splash username=nl hostname=nl-os"
+
+      - name: Add NL OS packages
         run: |
-          mkdir -p nl-layer/opt/nl-os
-          cp -R nl-os/* nl-layer/opt/nl-os/
-          cat > nl-layer/opt/nl-os/NL-OS-INFO.txt <<'TXT'
-          NL OS Alpha
-          Base: Ubuntu 24.04
-          Edition: Experimental
-          TXT
+          cd live
+          mkdir -p config/package-lists
+          cat > config/package-lists/nl-os.list.chroot <<'PKG'
+          task-xfce-desktop
+          lightdm
+          slick-greeter
+          firefox-esr
+          git
+          curl
+          wget
+          nano
+          neofetch
+          python3
+          python3-tk
+          gparted
+          htop
+          pavucontrol
+          network-manager
+          sudo
+          PKG
 
-      - name: Package NL layer
+      - name: Add NL OS custom files
         run: |
-          tar -czf nl-layer.tar.gz -C nl-layer .
+          cd live
 
-      - name: Create release ISO artifact placeholder
+          mkdir -p config/includes.chroot/opt/nl-os
+          mkdir -p config/includes.chroot/usr/local/bin
+          mkdir -p config/includes.chroot/etc/skel/Desktop
+          mkdir -p config/includes.chroot/etc/skel/.config/autostart
+          mkdir -p config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml
+
+          cp -R ../nl-os/* config/includes.chroot/opt/nl-os/
+
+          cat > config/includes.chroot/usr/local/bin/nl-welcome <<'SCRIPT'
+          #!/bin/bash
+          clear
+          echo "======================================"
+          echo "              NL OS ALPHA"
+          echo "======================================"
+          echo ""
+          echo "Luxury Linux Experimental System"
+          echo "Base: Debian Live"
+          echo ""
+          echo "Commandes utiles :"
+          echo "  nl-welcome"
+          echo "  nl-performance"
+          echo ""
+          SCRIPT
+          chmod +x config/includes.chroot/usr/local/bin/nl-welcome
+
+          cat > config/includes.chroot/usr/local/bin/nl-performance <<'SCRIPT'
+          #!/bin/bash
+          echo "Activation du mode performance NL..."
+          sudo sysctl vm.swappiness=10 2>/dev/null || true
+          sudo apt clean 2>/dev/null || true
+          echo "Mode performance appliqué."
+          SCRIPT
+          chmod +x config/includes.chroot/usr/local/bin/nl-performance
+
+          cat > config/includes.chroot/etc/skel/Desktop/NL-Control-Center.desktop <<'DESKTOP'
+          [Desktop Entry]
+          Type=Application
+          Name=NL Control Center
+          Exec=python3 /opt/nl-os/apps/nl-control-center.py
+          Icon=preferences-system
+          Terminal=false
+          Categories=Utility;
+          DESKTOP
+          chmod +x config/includes.chroot/etc/skel/Desktop/NL-Control-Center.desktop
+
+          cat > config/includes.chroot/etc/skel/.config/autostart/nl-welcome.desktop <<'DESKTOP'
+          [Desktop Entry]
+          Type=Application
+          Name=NL Welcome
+          Exec=xfce4-terminal -e nl-welcome
+          Hidden=false
+          NoDisplay=false
+          X-GNOME-Autostart-enabled=true
+          DESKTOP
+
+      - name: Add NL OS branding
+        run: |
+          cd live
+          mkdir -p config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml
+
+          cat > config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml <<'XML'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <channel name="xsettings" version="1.0">
+            <property name="Net" type="empty">
+              <property name="ThemeName" type="string" value="Adwaita-dark"/>
+              <property name="IconThemeName" type="string" value="Adwaita"/>
+            </property>
+            <property name="Xft" type="empty">
+              <property name="DPI" type="int" value="96"/>
+            </property>
+          </channel>
+          XML
+
+          cat > config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml <<'XML'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <channel name="xfce4-desktop" version="1.0">
+            <property name="desktop-icons" type="empty">
+              <property name="style" type="int" value="2"/>
+            </property>
+          </channel>
+          XML
+
+      - name: Build ISO
+        run: |
+          cd live
+          sudo lb build
+
+      - name: Rename ISO
         run: |
           mkdir -p output
-          cp ubuntu.iso output/NL-OS-Alpha-Ubuntu-Base.iso
-          cp nl-layer.tar.gz output/nl-layer.tar.gz
-          cat > output/README.txt <<'TXT'
-          NL OS Alpha package.
+          cp live/live-image-amd64.hybrid.iso output/NL-OS-Alpha-Bootable.iso
 
-          This build contains:
-          - Ubuntu 24.04 base ISO
-          - NL OS custom layer archive
-
-          Next step:
-          integrate NL layer directly into the live filesystem.
-          TXT
-
-      - name: Upload NL OS package
+      - name: Upload bootable ISO
         uses: actions/upload-artifact@v4
         with:
-          name: NL-OS-Alpha-Package
-          path: output/
+          name: NL-OS-Alpha-Bootable
+          path: output/NL-OS-Alpha-Bootable.iso

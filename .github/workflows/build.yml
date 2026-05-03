@@ -1,4 +1,4 @@
-name: Build NL OS Bootable Remix
+name: Build NLOS Alpha 2 Visual Bootable
 
 on:
   workflow_dispatch:
@@ -16,7 +16,7 @@ jobs:
       - name: Install ISO tools
         run: |
           sudo apt update
-          sudo apt install -y xorriso squashfs-tools rsync wget isolinux syslinux-common syslinux-utils
+          sudo apt install -y xorriso squashfs-tools rsync wget isolinux syslinux-common syslinux-utils python3
 
       - name: Download Debian Live XFCE ISO
         run: |
@@ -32,35 +32,269 @@ jobs:
         run: |
           sudo unsquashfs -d squashfs-root iso-root/live/filesystem.squashfs
 
-      - name: Add NL OS files
+      - name: Create NLOS visual assets
+        run: |
+          mkdir -p generated
+
+          python3 <<'PY'
+          import struct, zlib, math, random
+
+          W, H = 1920, 1080
+
+          def png_chunk(t, d):
+              return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t+d) & 0xffffffff)
+
+          def save_png(path, pixels):
+              raw = b"".join(b"\x00" + bytes(row) for row in pixels)
+              data = b"\x89PNG\r\n\x1a\n"
+              data += png_chunk(b"IHDR", struct.pack(">IIBBBBB", W, H, 8, 2, 0, 0, 0))
+              data += png_chunk(b"IDAT", zlib.compress(raw, 9))
+              data += png_chunk(b"IEND", b"")
+              open(path, "wb").write(data)
+
+          pixels = []
+          for y in range(H):
+              row = bytearray()
+              for x in range(W):
+                  nx = x / W
+                  ny = y / H
+
+                  # base eau claire / brume blanche
+                  r = int(218 + 20*nx - 18*ny)
+                  g = int(238 + 10*math.sin(nx*4) - 12*ny)
+                  b = int(244 + 8*math.cos(ny*5))
+
+                  # vague liquid glass douce
+                  wave = math.sin((nx*2.8 + ny*1.2) * math.pi) * 0.5 + 0.5
+                  curve = abs(ny - (0.55 + 0.06*math.sin(nx*6)))
+                  glow = max(0, 1 - curve*12) * 35
+                  r += int(glow * 0.85)
+                  g += int(glow * 0.95)
+                  b += int(glow * 1.10)
+
+                  # halo champagne en bas droite
+                  dx = nx - 0.78
+                  dy = ny - 0.72
+                  h1 = max(0, 1 - math.sqrt(dx*dx + dy*dy)*2.0)
+                  r += int(h1 * 34)
+                  g += int(h1 * 24)
+                  b += int(h1 * 8)
+
+                  # halo bleu en haut gauche
+                  dx2 = nx - 0.22
+                  dy2 = ny - 0.18
+                  h2 = max(0, 1 - math.sqrt(dx2*dx2 + dy2*dy2)*2.4)
+                  r -= int(h2 * 20)
+                  g += int(h2 * 10)
+                  b += int(h2 * 32)
+
+                  r = max(0, min(255, r))
+                  g = max(0, min(255, g))
+                  b = max(0, min(255, b))
+                  row += bytes((r, g, b))
+              pixels.append(row)
+
+          save_png("generated/nlos-liquid-wallpaper.png", pixels)
+          PY
+
+          cat > generated/nlos-logo.svg <<'SVG'
+          <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="45%" stop-color="#d7f1ff"/>
+                <stop offset="100%" stop-color="#d8c39c"/>
+              </linearGradient>
+              <filter id="s" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#6c8799" flood-opacity="0.28"/>
+              </filter>
+            </defs>
+            <rect x="46" y="46" width="420" height="420" rx="110" fill="url(#g)" filter="url(#s)"/>
+            <rect x="58" y="58" width="396" height="396" rx="100" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="8"/>
+            <path d="M142 346V166h46l134 118V166h48v180h-43L190 225v121h-48z" fill="#15202b"/>
+          </svg>
+          SVG
+
+      - name: Add NLOS visual system layer
         run: |
           sudo mkdir -p squashfs-root/opt/nl-os
           sudo cp -R nl-os/* squashfs-root/opt/nl-os/
 
+          sudo mkdir -p squashfs-root/usr/share/backgrounds/nlos
+          sudo cp generated/nlos-liquid-wallpaper.png squashfs-root/usr/share/backgrounds/nlos/nlos-liquid-wallpaper.png
+          sudo cp generated/nlos-logo.svg squashfs-root/usr/share/backgrounds/nlos/nlos-logo.svg
+
           sudo mkdir -p squashfs-root/usr/local/bin
+
           sudo tee squashfs-root/usr/local/bin/nl-welcome >/dev/null <<'SCRIPT'
           #!/bin/bash
           clear
           echo "======================================"
-          echo "              NL OS ALPHA"
+          echo "              NLOS ALPHA 2"
           echo "======================================"
           echo ""
-          echo "Luxury Linux Experimental System"
-          echo "Base: Debian Live XFCE Remix"
+          echo "Luxury Linux Experience"
+          echo "Visual Layer: Liquid Glass Alpha"
           echo ""
           SCRIPT
           sudo chmod +x squashfs-root/usr/local/bin/nl-welcome
 
           sudo tee squashfs-root/usr/local/bin/nl-performance >/dev/null <<'SCRIPT'
           #!/bin/bash
-          echo "Activation du mode performance NL..."
+          echo "Activation du mode performance NLOS..."
           sudo sysctl vm.swappiness=10 2>/dev/null || true
           echo "Mode performance appliqué."
           SCRIPT
           sudo chmod +x squashfs-root/usr/local/bin/nl-performance
 
-          sudo mkdir -p squashfs-root/etc/skel/Desktop
-          sudo tee squashfs-root/etc/skel/Desktop/NL-Control-Center.desktop >/dev/null <<'DESKTOP'
+          sudo tee squashfs-root/usr/local/bin/nlos-session-setup >/dev/null <<'SCRIPT'
+          #!/bin/bash
+
+          mkdir -p "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml"
+          mkdir -p "$HOME/.config/autostart"
+          mkdir -p "$HOME/Desktop"
+
+          cat > "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml" <<'XML'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <channel name="xsettings" version="1.0">
+            <property name="Net" type="empty">
+              <property name="ThemeName" type="string" value="Adwaita"/>
+              <property name="IconThemeName" type="string" value="Adwaita"/>
+            </property>
+            <property name="Xft" type="empty">
+              <property name="DPI" type="int" value="96"/>
+              <property name="Antialias" type="int" value="1"/>
+              <property name="Hinting" type="int" value="1"/>
+              <property name="HintStyle" type="string" value="hintslight"/>
+            </property>
+          </channel>
+          XML
+
+          cat > "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml" <<'XML'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <channel name="xfce4-desktop" version="1.0">
+            <property name="backdrop" type="empty">
+              <property name="screen0" type="empty">
+                <property name="monitor0" type="empty">
+                  <property name="workspace0" type="empty">
+                    <property name="last-image" type="string" value="/usr/share/backgrounds/nlos/nlos-liquid-wallpaper.png"/>
+                    <property name="image-style" type="int" value="5"/>
+                  </property>
+                </property>
+              </property>
+            </property>
+            <property name="desktop-icons" type="empty">
+              <property name="style" type="int" value="0"/>
+            </property>
+          </channel>
+          XML
+
+          cat > "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml" <<'XML'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <channel name="xfce4-panel" version="1.0">
+            <property name="configver" type="int" value="2"/>
+            <property name="panels" type="array">
+              <value type="int" value="1"/>
+              <value type="int" value="2"/>
+              <property name="panel-1" type="empty">
+                <property name="position" type="string" value="p=6;x=960;y=18"/>
+                <property name="length" type="uint" value="100"/>
+                <property name="size" type="uint" value="32"/>
+                <property name="mode" type="uint" value="0"/>
+                <property name="background-style" type="uint" value="1"/>
+                <property name="background-rgba" type="array">
+                  <value type="double" value="0.96"/>
+                  <value type="double" value="0.98"/>
+                  <value type="double" value="1.00"/>
+                  <value type="double" value="0.42"/>
+                </property>
+                <property name="plugin-ids" type="array">
+                  <value type="int" value="1"/>
+                  <value type="int" value="2"/>
+                  <value type="int" value="3"/>
+                  <value type="int" value="4"/>
+                  <value type="int" value="5"/>
+                </property>
+              </property>
+              <property name="panel-2" type="empty">
+                <property name="position" type="string" value="p=10;x=960;y=1038"/>
+                <property name="length" type="uint" value="38"/>
+                <property name="size" type="uint" value="72"/>
+                <property name="mode" type="uint" value="0"/>
+                <property name="background-style" type="uint" value="1"/>
+                <property name="background-rgba" type="array">
+                  <value type="double" value="0.98"/>
+                  <value type="double" value="0.98"/>
+                  <value type="double" value="0.96"/>
+                  <value type="double" value="0.58"/>
+                </property>
+                <property name="plugin-ids" type="array">
+                  <value type="int" value="6"/>
+                  <value type="int" value="7"/>
+                  <value type="int" value="8"/>
+                  <value type="int" value="9"/>
+                  <value type="int" value="10"/>
+                  <value type="int" value="11"/>
+                </property>
+              </property>
+            </property>
+            <property name="plugins" type="empty">
+              <property name="plugin-1" type="string" value="applicationsmenu">
+                <property name="button-title" type="string" value="NLOS"/>
+                <property name="button-icon" type="string" value="/usr/share/backgrounds/nlos/nlos-logo.svg"/>
+              </property>
+              <property name="plugin-2" type="string" value="separator">
+                <property name="expand" type="bool" value="true"/>
+                <property name="style" type="uint" value="0"/>
+              </property>
+              <property name="plugin-3" type="string" value="systray"/>
+              <property name="plugin-4" type="string" value="pulseaudio"/>
+              <property name="plugin-5" type="string" value="clock">
+                <property name="digital-format" type="string" value="%a %d %b  %H:%M"/>
+              </property>
+              <property name="plugin-6" type="string" value="launcher">
+                <property name="items" type="array">
+                  <value type="string" value="exo-file-manager.desktop"/>
+                </property>
+              </property>
+              <property name="plugin-7" type="string" value="launcher">
+                <property name="items" type="array">
+                  <value type="string" value="firefox-esr.desktop"/>
+                </property>
+              </property>
+              <property name="plugin-8" type="string" value="launcher">
+                <property name="items" type="array">
+                  <value type="string" value="xfce4-terminal.desktop"/>
+                </property>
+              </property>
+              <property name="plugin-9" type="string" value="launcher">
+                <property name="items" type="array">
+                  <value type="string" value="xfce-settings-manager.desktop"/>
+                </property>
+              </property>
+              <property name="plugin-10" type="string" value="launcher">
+                <property name="items" type="array">
+                  <value type="string" value="nl-control-center.desktop"/>
+                </property>
+              </property>
+              <property name="plugin-11" type="string" value="showdesktop"/>
+            </property>
+          </channel>
+          XML
+
+          cat > "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml" <<'XML'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <channel name="xfwm4" version="1.0">
+            <property name="general" type="empty">
+              <property name="theme" type="string" value="Default"/>
+              <property name="button_layout" type="string" value="O|HMC"/>
+              <property name="title_font" type="string" value="Sans Bold 10"/>
+              <property name="show_frame_shadow" type="bool" value="true"/>
+            </property>
+          </channel>
+          XML
+
+          cat > "$HOME/Desktop/NL Control Center.desktop" <<'DESKTOP'
           [Desktop Entry]
           Type=Application
           Name=NL Control Center
@@ -69,18 +303,43 @@ jobs:
           Terminal=false
           Categories=Utility;
           DESKTOP
-          sudo chmod +x squashfs-root/etc/skel/Desktop/NL-Control-Center.desktop
+          chmod +x "$HOME/Desktop/NL Control Center.desktop"
+
+          xfdesktop --reload >/dev/null 2>&1 || true
+          xfce4-panel --restart >/dev/null 2>&1 || true
+          SCRIPT
+          sudo chmod +x squashfs-root/usr/local/bin/nlos-session-setup
 
           sudo mkdir -p squashfs-root/etc/skel/.config/autostart
-          sudo tee squashfs-root/etc/skel/.config/autostart/nl-welcome.desktop >/dev/null <<'DESKTOP'
+          sudo tee squashfs-root/etc/skel/.config/autostart/nlos-session-setup.desktop >/dev/null <<'DESKTOP'
           [Desktop Entry]
           Type=Application
-          Name=NL Welcome
-          Exec=xfce4-terminal -e nl-welcome
+          Name=NLOS Session Setup
+          Exec=/usr/local/bin/nlos-session-setup
           Hidden=false
-          NoDisplay=false
+          NoDisplay=true
           X-GNOME-Autostart-enabled=true
           DESKTOP
+
+          sudo mkdir -p squashfs-root/etc/skel/Desktop
+          sudo tee squashfs-root/etc/skel/Desktop/nl-control-center.desktop >/dev/null <<'DESKTOP'
+          [Desktop Entry]
+          Type=Application
+          Name=NL Control Center
+          Exec=python3 /opt/nl-os/apps/nl-control-center.py
+          Icon=preferences-system
+          Terminal=false
+          Categories=Utility;
+          DESKTOP
+          sudo chmod +x squashfs-root/etc/skel/Desktop/nl-control-center.desktop
+
+          sudo tee squashfs-root/etc/hostname >/dev/null <<'HOST'
+          nlos
+          HOST
+
+          sudo tee squashfs-root/etc/issue >/dev/null <<'ISSUE'
+          NLOS Alpha 2 \n \l
+          ISSUE
 
       - name: Repack filesystem
         run: |
@@ -88,12 +347,17 @@ jobs:
           sudo mksquashfs squashfs-root iso-root/live/filesystem.squashfs -comp xz
           sudo du -sx --block-size=1 squashfs-root | cut -f1 | sudo tee iso-root/live/filesystem.size
 
+      - name: Replace boot menu branding
+        run: |
+          sudo find iso-root -type f \( -name "*.cfg" -o -name "*.txt" \) -exec sed -i 's/Debian GNU\/Linux/NLOS Alpha 2/g; s/Debian Live/NLOS Alpha 2/g; s/debian/NLOS/g; s/Debian/NLOS/g' {} \; || true
+          sudo find iso-root -type f \( -name "*.cfg" -o -name "*.txt" \) -exec sed -i 's/Live system (amd64)/NLOS Live/g; s/Start installer/NLOS Installer/g' {} \; || true
+
       - name: Build bootable ISO
         run: |
           cd iso-root
           sudo xorriso -as mkisofs \
-            -r -V "NL_OS_ALPHA" \
-            -o ../NL-OS-Alpha-Bootable.iso \
+            -r -V "NLOS_ALPHA_2" \
+            -o ../NLOS-Alpha-2-Bootable.iso \
             -J -joliet-long \
             -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
             -partition_offset 16 \
@@ -106,8 +370,8 @@ jobs:
             -isohybrid-gpt-basdat \
             .
 
-      - name: Upload bootable ISO
+      - name: Upload NLOS Alpha 2 ISO
         uses: actions/upload-artifact@v4
         with:
-          name: NL-OS-Alpha-Bootable
-          path: NL-OS-Alpha-Bootable.iso
+          name: NLOS-Alpha-2-Bootable
+          path: NLOS-Alpha-2-Bootable.iso

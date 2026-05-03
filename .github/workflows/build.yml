@@ -16,11 +16,11 @@ jobs:
       - name: Install ISO tools
         run: |
           sudo apt update
-          sudo apt install -y xorriso squashfs-tools rsync wget
+          sudo apt install -y xorriso squashfs-tools rsync wget isolinux syslinux-common syslinux-utils
 
       - name: Download Debian Live XFCE ISO
         run: |
-          wget -O debian-live.iso https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-12.11.0-amd64-xfce.iso
+          wget -O debian-live.iso https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.4.0-amd64-xfce.iso
 
       - name: Extract ISO
         run: |
@@ -30,7 +30,6 @@ jobs:
 
       - name: Extract filesystem
         run: |
-          mkdir squashfs-root
           sudo unsquashfs -d squashfs-root iso-root/live/filesystem.squashfs
 
       - name: Add NL OS files
@@ -72,10 +71,21 @@ jobs:
           DESKTOP
           sudo chmod +x squashfs-root/etc/skel/Desktop/NL-Control-Center.desktop
 
+          sudo mkdir -p squashfs-root/etc/skel/.config/autostart
+          sudo tee squashfs-root/etc/skel/.config/autostart/nl-welcome.desktop >/dev/null <<'DESKTOP'
+          [Desktop Entry]
+          Type=Application
+          Name=NL Welcome
+          Exec=xfce4-terminal -e nl-welcome
+          Hidden=false
+          NoDisplay=false
+          X-GNOME-Autostart-enabled=true
+          DESKTOP
+
       - name: Repack filesystem
         run: |
-          sudo rm iso-root/live/filesystem.squashfs
-          sudo mksquashfs squashfs-root iso-root/live/filesystem.squashfs -comp xz -wildcards
+          sudo rm -f iso-root/live/filesystem.squashfs
+          sudo mksquashfs squashfs-root iso-root/live/filesystem.squashfs -comp xz
           sudo du -sx --block-size=1 squashfs-root | cut -f1 | sudo tee iso-root/live/filesystem.size
 
       - name: Build bootable ISO

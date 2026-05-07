@@ -1,0 +1,75 @@
+#!/bin/bash
+
+set -e
+
+MODE="$1"
+
+if [ -z "$MODE" ]; then
+  echo "Usage:"
+  echo "  nlos-boost normal"
+  echo "  nlos-boost performance"
+  echo "  nlos-boost gaming"
+  echo "  nlos-boost oldmac"
+  echo "  nlos-boost battery"
+  exit 1
+fi
+
+need_root() {
+  if [ "$EUID" -ne 0 ]; then
+    echo "Cette commande doit être lancée avec sudo."
+    exit 1
+  fi
+}
+
+apply_common() {
+  sysctl -w vm.swappiness=10 >/dev/null 2>&1 || true
+  sysctl -w vm.vfs_cache_pressure=50 >/dev/null 2>&1 || true
+  sysctl -w kernel.sched_autogroup_enabled=1 >/dev/null 2>&1 || true
+}
+
+case "$MODE" in
+  normal)
+    need_root
+    echo "NLOS : retour au mode normal."
+    apply_common
+    ;;
+
+  performance)
+    need_root
+    echo "NLOS : mode performance."
+    apply_common
+    sysctl -w vm.dirty_ratio=10 >/dev/null 2>&1 || true
+    sysctl -w vm.dirty_background_ratio=5 >/dev/null 2>&1 || true
+    ;;
+
+  gaming)
+    need_root
+    echo "NLOS : mode gaming."
+    apply_common
+    sysctl -w vm.swappiness=5 >/dev/null 2>&1 || true
+    sysctl -w kernel.sched_child_runs_first=0 >/dev/null 2>&1 || true
+    echo "Conseil : lance tes jeux avec nlos-game-run."
+    ;;
+
+  oldmac)
+    need_root
+    echo "NLOS : mode vieux Mac / machine faible."
+    apply_common
+    sysctl -w vm.swappiness=20 >/dev/null 2>&1 || true
+    sysctl -w vm.dirty_ratio=8 >/dev/null 2>&1 || true
+    sysctl -w vm.dirty_background_ratio=3 >/dev/null 2>&1 || true
+    ;;
+
+  battery)
+    need_root
+    echo "NLOS : mode économie."
+    sysctl -w vm.swappiness=30 >/dev/null 2>&1 || true
+    ;;
+
+  *)
+    echo "Mode inconnu : $MODE"
+    exit 1
+    ;;
+esac
+
+echo "NLOS Boost appliqué : $MODE"

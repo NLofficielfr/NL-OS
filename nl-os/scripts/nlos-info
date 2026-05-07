@@ -1,0 +1,29 @@
+#!/bin/bash
+
+echo "======================================"
+echo "              NLOS INFO"
+echo "======================================"
+echo ""
+
+echo "Système :"
+uname -a
+echo ""
+
+echo "CPU :"
+lscpu 2>/dev/null | grep -E "Model name|Architecture|CPU\(s\)" || true
+echo ""
+
+echo "Mémoire :"
+free -h || true
+echo ""
+
+echo "Disques :"
+lsblk || true
+echo ""
+
+echo "GPU :"
+lspci 2>/dev/null | grep -Ei "vga|3d|display" || echo "GPU non détecté via lspci."
+echo ""
+
+echo "Session :"
+echo "NLOS Lite Alpha 4"

@@ -1,0 +1,8 @@
+#!/bin/bash
+if command -v firefox-esr >/dev/null 2>&1; then
+  firefox-esr /opt/nl-os/apps/nlos-center.html >/dev/null 2>&1 &
+elif command -v firefox >/dev/null 2>&1; then
+  firefox /opt/nl-os/apps/nlos-center.html >/dev/null 2>&1 &
+else
+  echo "Firefox non trouvé. Ouvre : /opt/nl-os/apps/nlos-center.html"
+fi

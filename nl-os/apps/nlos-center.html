@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>NLOS Center</title>
+<style>
+:root {
+  --bg1: #eaf8ff;
+  --bg2: #f8fbff;
+  --text: #101923;
+  --muted: #657783;
+  --glass: rgba(255,255,255,.62);
+  --line: rgba(170,205,220,.65);
+  --blue: #8fd7ef;
+  --gold: #d7bf86;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  height: 100vh;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 20% 15%, rgba(145,220,245,.7), transparent 35%),
+    radial-gradient(circle at 80% 72%, rgba(230,207,151,.55), transparent 35%),
+    linear-gradient(135deg, var(--bg1), var(--bg2));
+}
+
+.wave {
+  position: fixed;
+  inset: 0;
+  background:
+    linear-gradient(115deg, transparent 0%, transparent 38%, rgba(255,255,255,.42) 39%, transparent 43%),
+    linear-gradient(145deg, transparent 0%, transparent 54%, rgba(126,206,238,.35) 55%, transparent 62%);
+  filter: blur(.2px);
+  pointer-events: none;
+}
+
+.topbar {
+  position: absolute;
+  top: 22px;
+  left: 28px;
+  right: 28px;
+  height: 56px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.58);
+  backdrop-filter: blur(24px);
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  padding: 0 22px;
+  box-shadow: 0 24px 80px rgba(90,130,150,.16);
+}
+
+.brand {
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -.04em;
+}
+
+.status {
+  margin-left: 16px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.clock {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.grid {
+  position: absolute;
+  top: 110px;
+  left: 40px;
+  right: 40px;
+  bottom: 112px;
+  display: grid;
+  grid-template-columns: 310px 1fr 330px;
+  gap: 24px;
+}
+
+.card {
+  border: 1px solid var(--line);
+  background: var(--glass);
+  backdrop-filter: blur(30px);
+  border-radius: 34px;
+  box-shadow: 0 26px 80px rgba(80,130,150,.17);
+  overflow: hidden;
+}
+
+.identity {
+  padding: 28px;
+}
+
+.hello {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.user {
+  margin-top: 6px;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -.04em;
+}
+
+.pill {
+  margin-top: 22px;
+  display: inline-flex;
+  border-radius: 999px;
+  background: rgba(255,255,255,.58);
+  border: 1px solid var(--line);
+  padding: 10px 14px;
+  color: #147250;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.apps {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(2,1fr);
+  gap: 12px;
+}
+
+.app {
+  height: 82px;
+  border-radius: 24px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.72);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: default;
+  transition: transform .18s, background .18s;
+}
+
+.app:hover {
+  transform: translateY(-2px);
+  background: rgba(255,255,255,.92);
+}
+
+.icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, white, #bfe9f7);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  margin-bottom: 7px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 8px 18px rgba(60,120,150,.18);
+}
+
+.app span {
+  font-size: 12px;
+  color: #2b3c47;
+}
+
+.hero {
+  position: relative;
+  padding: 38px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.logo {
+  font-size: 96px;
+  font-weight: 850;
+  letter-spacing: -.08em;
+  line-height: .9;
+}
+
+.tagline {
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 19px;
+}
+
+.search {
+  margin-top: 36px;
+  width: min(520px, 90%);
+  height: 56px;
+  border-radius: 28px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.72);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px 0 22px;
+  color: var(--muted);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+}
+
+.actions {
+  margin-top: 24px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.action {
+  border-radius: 999px;
+  padding: 12px 18px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.64);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.control {
+  padding: 28px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -.03em;
+}
+
+.tiles {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: repeat(2,1fr);
+  gap: 14px;
+}
+
+.tile {
+  min-height: 86px;
+  border-radius: 24px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.68);
+  padding: 16px;
+}
+
+.tile strong {
+  display: block;
+  font-size: 14px;
+}
+
+.tile span {
+  display: block;
+  color: var(--muted);
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.slider {
+  margin-top: 26px;
+}
+
+.bar {
+  margin-top: 12px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(180,210,220,.55);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  width: 74%;
+  background: linear-gradient(90deg, var(--blue), var(--gold));
+}
+
+.dock {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  height: 72px;
+  border-radius: 34px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.62);
+  backdrop-filter: blur(32px);
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 0 18px;
+  box-shadow: 0 28px 70px rgba(70,120,145,.20);
+}
+
+.dockicon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, white, #d6f2fa);
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 8px 18px rgba(60,120,150,.18);
+}
+</style>
+</head>
+<body>
+<div class="wave"></div>
+
+<div class="topbar">
+  <div class="brand">NLOS</div>
+  <div class="status">Lite Alpha 4 · Live Session</div>
+  <div class="clock" id="clock"></div>
+</div>
+
+<div class="grid">
+  <div class="card identity">
+    <div class="hello">Bonjour,</div>
+    <div class="user">NL User</div>
+    <div class="pill">NLOS Boost prêt</div>
+
+    <div class="apps">
+      <div class="app"><div class="icon">⌂</div><span>Fichiers</span></div>
+      <div class="app"><div class="icon">◎</div><span>Web</span></div>
+      <div class="app"><div class="icon">&gt;</div><span>Terminal</span></div>
+      <div class="app"><div class="icon">⚙</div><span>Réglages</span></div>
+      <div class="app"><div class="icon">↯</div><span>Gaming</span></div>
+      <div class="app"><div class="icon">◇</div><span>Store</span></div>
+    </div>
+  </div>
+
+  <div class="card hero">
+    <div class="logo">NLOS</div>
+    <div class="tagline">A light, clean and adaptive Linux experience.</div>
+    <div class="search">
+      <span>Rechercher dans NLOS</span>
+      <strong>↵</strong>
+    </div>
+    <div class="actions">
+      <div class="action">Mode Performance</div>
+      <div class="action">Mode Gaming</div>
+      <div class="action">Mode Old Mac</div>
+      <div class="action">Diagnostic</div>
+    </div>
+  </div>
+
+  <div class="card control">
+    <div class="title">Centre de contrôle</div>
+
+    <div class="tiles">
+      <div class="tile"><strong>Wi-Fi</strong><span>Actif</span></div>
+      <div class="tile"><strong>Son</strong><span>72%</span></div>
+      <div class="tile"><strong>Énergie</strong><span>Équilibré</span></div>
+      <div class="tile"><strong>Système</strong><span>Live USB</span></div>
+    </div>
+
+    <div class="slider">
+      <strong>Luminosité</strong>
+      <div class="bar"><div class="fill"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="dock">
+  <div class="dockicon">N</div>
+  <div class="dockicon">⌂</div>
+  <div class="dockicon">&gt;</div>
+  <div class="dockicon">◎</div>
+  <div class="dockicon">⚙</div>
+  <div class="dockicon">↯</div>
+</div>
+
+<script>
+function tick() {
+  const d = new Date();
+  document.getElementById("clock").textContent =
+    d.toLocaleDateString("fr-FR", { weekday:"short", day:"numeric", month:"short" }) +
+    "  " +
+    d.toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit" });
+}
+tick();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>

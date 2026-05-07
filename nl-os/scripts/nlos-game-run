@@ -1,0 +1,25 @@
+#!/bin/bash
+
+if [ "$#" -eq 0 ]; then
+  echo "Usage:"
+  echo "  nlos-game-run commande_du_jeu"
+  echo ""
+  echo "Exemple:"
+  echo "  nlos-game-run wine game.exe"
+  echo "  nlos-game-run ./mon-jeu-linux"
+  exit 1
+fi
+
+export WINEDEBUG=-all
+export __GL_THREADED_OPTIMIZATIONS=1
+export MESA_GLTHREAD=true
+export vblank_mode=0
+export DXVK_LOG_LEVEL=none
+export VKD3D_DEBUG=none
+export PULSE_LATENCY_MSEC=60
+
+if command -v gamemoderun >/dev/null 2>&1; then
+  exec gamemoderun "$@"
+else
+  exec "$@"
+fi

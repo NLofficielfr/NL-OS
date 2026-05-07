@@ -1,0 +1,2 @@
+#!/bin/bash
+python3 /opt/nl-os/nl-shell/nl-shell.py

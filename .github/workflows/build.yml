@@ -1,4 +1,4 @@
-name: Build NLOS Lite Alpha 4
+name: Build NLOS Lite Alpha 5 Native Shell
 
 on:
   workflow_dispatch:
@@ -32,71 +32,74 @@ jobs:
         run: |
           sudo unsquashfs -d squashfs-root iso-root/live/filesystem.squashfs
 
-      - name: Add NLOS core
+      - name: Add NL OS files
         run: |
           sudo mkdir -p squashfs-root/opt/nl-os
           sudo cp -R nl-os/* squashfs-root/opt/nl-os/
 
           sudo mkdir -p squashfs-root/usr/local/bin
-          sudo cp nl-os/scripts/nlos-boost squashfs-root/usr/local/bin/nlos-boost
-          sudo cp nl-os/scripts/nlos-game-run squashfs-root/usr/local/bin/nlos-game-run
-          sudo cp nl-os/scripts/nlos-info squashfs-root/usr/local/bin/nlos-info
-          sudo cp nl-os/scripts/nlos-center squashfs-root/usr/local/bin/nlos-center
-          sudo chmod +x squashfs-root/usr/local/bin/nlos-boost
-          sudo chmod +x squashfs-root/usr/local/bin/nlos-game-run
-          sudo chmod +x squashfs-root/usr/local/bin/nlos-info
-          sudo chmod +x squashfs-root/usr/local/bin/nlos-center
 
-      - name: Add NLOS first boot configuration
+          sudo cp nl-os/scripts/nlos-shell squashfs-root/usr/local/bin/nlos-shell
+          sudo chmod +x squashfs-root/usr/local/bin/nlos-shell
+
+          if [ -f nl-os/scripts/nlos-boost ]; then
+            sudo cp nl-os/scripts/nlos-boost squashfs-root/usr/local/bin/nlos-boost
+            sudo chmod +x squashfs-root/usr/local/bin/nlos-boost
+          fi
+
+          if [ -f nl-os/scripts/nlos-game-run ]; then
+            sudo cp nl-os/scripts/nlos-game-run squashfs-root/usr/local/bin/nlos-game-run
+            sudo chmod +x squashfs-root/usr/local/bin/nlos-game-run
+          fi
+
+          if [ -f nl-os/scripts/nlos-info ]; then
+            sudo cp nl-os/scripts/nlos-info squashfs-root/usr/local/bin/nlos-info
+            sudo chmod +x squashfs-root/usr/local/bin/nlos-info
+          fi
+
+      - name: Install NL Shell dependencies inside ISO
+        run: |
+          sudo chroot squashfs-root /bin/bash -c "apt update && apt install -y python3-pyqt5"
+
+      - name: Configure autostart
         run: |
           sudo mkdir -p squashfs-root/etc/skel/.config/autostart
           sudo mkdir -p squashfs-root/etc/skel/Desktop
-          sudo mkdir -p squashfs-root/etc/skel/.local/share/applications
 
-          sudo tee squashfs-root/etc/skel/.local/share/applications/nlos-center.desktop >/dev/null <<'DESKTOP'
+          sudo tee squashfs-root/etc/skel/.config/autostart/nlos-shell.desktop >/dev/null <<'DESKTOP'
           [Desktop Entry]
           Type=Application
-          Name=NLOS Center
-          Exec=nlos-center
-          Icon=applications-system
-          Terminal=false
-          Categories=System;
-          DESKTOP
-
-          sudo tee squashfs-root/etc/skel/Desktop/NLOS-Center.desktop >/dev/null <<'DESKTOP'
-          [Desktop Entry]
-          Type=Application
-          Name=NLOS Center
-          Exec=nlos-center
-          Icon=applications-system
-          Terminal=false
-          Categories=System;
-          DESKTOP
-
-          sudo chmod +x squashfs-root/etc/skel/Desktop/NLOS-Center.desktop
-
-          sudo tee squashfs-root/etc/skel/.config/autostart/nlos-center.desktop >/dev/null <<'DESKTOP'
-          [Desktop Entry]
-          Type=Application
-          Name=NLOS Center
-          Exec=nlos-center
+          Name=NL Shell
+          Exec=nlos-shell
           Hidden=false
           NoDisplay=false
           X-GNOME-Autostart-enabled=true
           DESKTOP
+
+          sudo tee squashfs-root/etc/skel/Desktop/NL-Shell.desktop >/dev/null <<'DESKTOP'
+          [Desktop Entry]
+          Type=Application
+          Name=NL Shell
+          Exec=nlos-shell
+          Icon=applications-system
+          Terminal=false
+          Categories=System;
+          DESKTOP
+
+          sudo chmod +x squashfs-root/etc/skel/Desktop/NL-Shell.desktop
 
           sudo tee squashfs-root/etc/hostname >/dev/null <<'HOST'
           nlos
           HOST
 
           sudo tee squashfs-root/etc/issue >/dev/null <<'ISSUE'
-          NLOS Lite Alpha 4 \n \l
+          NL OS Lite Alpha 5 \n \l
           ISSUE
 
       - name: Replace boot menu text
         run: |
-          sudo find iso-root -type f \( -name "*.cfg" -o -name "*.txt" \) -exec sed -i 's/Debian GNU\/Linux/NLOS Lite Alpha 4/g; s/Debian Live/NLOS Lite Alpha 4/g; s/debian/NLOS/g; s/Debian/NLOS/g' {} \; || true
-          sudo find iso-root -type f \( -name "*.cfg" -o -name "*.txt" \) -exec sed -i 's/Live system (amd64)/NLOS Live/g; s/Start installer/NLOS Installer/g' {} \; || true
+          sudo find iso-root -type f \( -name "*.cfg" -o -name "*.txt" \) -exec sed -i 's/Debian GNU\/Linux/NL OS Lite Alpha 5/g; s/Debian Live/NL OS Lite Alpha 5/g; s/debian/NLOS/g; s/Debian/NL OS/g' {} \; || true
+          sudo find iso-root -type f \( -name "*.cfg" -o -name "*.txt" \) -exec sed -i 's/Live system (amd64)/NL OS Live/g; s/Start installer/NL OS Installer/g' {} \; || true
 
       - name: Repack filesystem
         run: |
@@ -108,8 +111,8 @@ jobs:
         run: |
           cd iso-root
           sudo xorriso -as mkisofs \
-            -r -V "NLOS_LITE_A4" \
-            -o ../NLOS-Lite-Alpha-4.iso \
+            -r -V "NLOS_LITE_A5" \
+            -o ../NLOS-Lite-Alpha-5.iso \
             -J -joliet-long \
             -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
             -partition_offset 16 \
@@ -122,8 +125,8 @@ jobs:
             -isohybrid-gpt-basdat \
             .
 
-      - name: Upload NLOS ISO
+      - name: Upload NLOS Alpha 5 ISO
         uses: actions/upload-artifact@v4
         with:
-          name: NLOS-Lite-Alpha-4
-          path: NLOS-Lite-Alpha-4.iso
+          name: NLOS-Lite-Alpha-5
+          path: NLOS-Lite-Alpha-5.iso

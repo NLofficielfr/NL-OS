@@ -59,7 +59,14 @@ jobs:
 
       - name: Install NL Shell dependencies inside ISO
         run: |
+          sudo cp /etc/resolv.conf squashfs-root/etc/resolv.conf
+          sudo mount --bind /dev squashfs-root/dev
+          sudo mount --bind /proc squashfs-root/proc
+          sudo mount --bind /sys squashfs-root/sys
           sudo chroot squashfs-root /bin/bash -c "apt update && apt install -y python3-pyqt5"
+          sudo umount -lf squashfs-root/dev || true
+          sudo umount -lf squashfs-root/proc || true
+          sudo umount -lf squashfs-root/sys || true
 
       - name: Configure autostart
         run: |

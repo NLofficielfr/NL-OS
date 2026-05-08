@@ -1,4 +1,4 @@
-name: Build NL OS Lite Alpha 5 Native Shell
+name: Build NL OS Full Redesign
 
 on:
   workflow_dispatch:
@@ -16,26 +16,31 @@ jobs:
       - name: Install ISO tools
         run: |
           sudo apt update
-          sudo apt install -y xorriso squashfs-tools rsync wget isolinux syslinux-common syslinux-utils python3
+          sudo apt install -y xorriso squashfs-tools rsync wget curl isolinux syslinux-common syslinux-utils python3
 
       - name: Download Debian Live XFCE ISO
         run: |
-          wget -O debian-live.iso https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/debian-live-13.4.0-amd64-xfce.iso
+          PAGE="https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/"
+          ISO_NAME=$(curl -fsSL "$PAGE" | grep -o 'debian-live-[^"]*-amd64-xfce.iso' | head -n 1)
+          echo "ISO=$ISO_NAME"
+          test -n "$ISO_NAME"
+          wget -O base-live.iso "$PAGE/$ISO_NAME"
 
       - name: Extract ISO
         run: |
           mkdir iso-root
-          xorriso -osirrox on -indev debian-live.iso -extract / iso-root
+          xorriso -osirrox on -indev base-live.iso -extract / iso-root
           chmod -R u+w iso-root
 
       - name: Extract filesystem
         run: |
           sudo unsquashfs -d squashfs-root iso-root/live/filesystem.squashfs
 
-      - name: Fix APT sources inside ISO
+      - name: Fix APT sources
         run: |
           sudo rm -f squashfs-root/etc/apt/sources.list
           sudo mkdir -p squashfs-root/etc/apt/sources.list.d
+          sudo find squashfs-root/etc/apt/sources.list.d -type f -delete || true
 
           sudo tee squashfs-root/etc/apt/sources.list >/dev/null <<'APT'
           deb http://deb.debian.org/debian trixie main contrib non-free non-free-firmware
@@ -43,7 +48,6 @@ jobs:
           deb http://deb.debian.org/debian trixie-updates main contrib non-free non-free-firmware
           APT
 
-          sudo find squashfs-root/etc/apt/sources.list.d -type f -name "*.list" -delete || true
           sudo cp /etc/resolv.conf squashfs-root/etc/resolv.conf
 
       - name: Add NL OS files
@@ -53,20 +57,14 @@ jobs:
 
           sudo mkdir -p squashfs-root/usr/local/bin
 
-          sudo cp nl-os/scripts/nlos-shell squashfs-root/usr/local/bin/nlos-shell
-          sudo chmod +x squashfs-root/usr/local/bin/nlos-shell
-
-          sudo cp nl-os/scripts/nlos-apply-real-design squashfs-root/usr/local/bin/nlos-apply-real-design
-          sudo chmod +x squashfs-root/usr/local/bin/nlos-apply-real-design
+          if [ -f nl-os/scripts/nl-force-redesign ]; then
+            sudo cp nl-os/scripts/nl-force-redesign squashfs-root/usr/local/bin/nl-force-redesign
+            sudo chmod +x squashfs-root/usr/local/bin/nl-force-redesign
+          fi
 
           if [ -f nl-os/scripts/nlos-boost ]; then
             sudo cp nl-os/scripts/nlos-boost squashfs-root/usr/local/bin/nlos-boost
             sudo chmod +x squashfs-root/usr/local/bin/nlos-boost
-          fi
-
-          if [ -f nl-os/scripts/nlos-game-run ]; then
-            sudo cp nl-os/scripts/nlos-game-run squashfs-root/usr/local/bin/nlos-game-run
-            sudo chmod +x squashfs-root/usr/local/bin/nlos-game-run
           fi
 
           if [ -f nl-os/scripts/nlos-info ]; then
@@ -74,146 +72,153 @@ jobs:
             sudo chmod +x squashfs-root/usr/local/bin/nlos-info
           fi
 
-      - name: Install NL Shell dependencies inside ISO
+          if [ -f nl-os/scripts/nl-control ]; then
+            sudo cp nl-os/scripts/nl-control squashfs-root/usr/local/bin/nl-control
+            sudo chmod +x squashfs-root/usr/local/bin/nl-control
+          fi
+
+      - name: Install optional NL dependencies
         run: |
           sudo mount --bind /dev squashfs-root/dev
           sudo mount --bind /proc squashfs-root/proc
           sudo mount --bind /sys squashfs-root/sys
 
           sudo chroot squashfs-root /bin/bash -c "
-            rm -f /etc/apt/sources.list.d/*.list || true
             apt clean
-            apt update
-            apt install -y python3-pyqt5
+            apt update || true
+            apt install -y python3-pyqt5 || true
           "
 
           sudo umount -lf squashfs-root/dev || true
           sudo umount -lf squashfs-root/proc || true
           sudo umount -lf squashfs-root/sys || true
 
-      - name: Configure NL OS autostart
+      - name: Configure NL OS session
         run: |
           sudo mkdir -p squashfs-root/etc/skel/.config/autostart
           sudo mkdir -p squashfs-root/etc/skel/Desktop
+          sudo mkdir -p squashfs-root/etc/skel/.local/share/applications
 
-          sudo tee squashfs-root/etc/skel/.config/autostart/nlos-apply-real-design.desktop >/dev/null <<'DESKTOP'
+          sudo tee squashfs-root/etc/skel/.config/autostart/nl-force-redesign.desktop >/dev/null <<'DESKTOP'
           [Desktop Entry]
           Type=Application
-          Name=Apply NL OS Real Design
-          Exec=nlos-apply-real-design
+          Name=NL OS Redesign
+          Exec=nl-force-redesign
           Hidden=false
           NoDisplay=true
           X-GNOME-Autostart-enabled=true
           DESKTOP
 
-          sudo tee squashfs-root/etc/skel/Desktop/NL-Shell.desktop >/dev/null <<'DESKTOP'
-          [Desktop Entry]
-          Type=Application
-          Name=NL Shell
-          Exec=nlos-shell
-          Icon=applications-system
-          Terminal=false
-          Categories=System;
-          DESKTOP
-
-          sudo chmod +x squashfs-root/etc/skel/Desktop/NL-Shell.desktop
+          sudo rm -f squashfs-root/etc/skel/Desktop/Install*.desktop || true
+          sudo rm -f squashfs-root/etc/skel/Desktop/Debian*.desktop || true
+          sudo rm -f squashfs-root/usr/share/applications/debian-installer*.desktop || true
+          sudo rm -f squashfs-root/usr/share/applications/calamares*.desktop || true
 
           sudo tee squashfs-root/etc/hostname >/dev/null <<'HOST'
           nlos
           HOST
 
           sudo tee squashfs-root/etc/issue >/dev/null <<'ISSUE'
-          NL OS Lite Alpha 5 \n \l
+          NL OS \n \l
           ISSUE
 
-      - name: Generate NL OS boot assets
+          sudo sed -i 's/Debian/NL OS/g; s/debian/NL OS/g; s/Live user/NL User/g' squashfs-root/etc/os-release || true
+
+      - name: Generate real NL boot logo
         run: |
           mkdir -p boot-assets
 
           python3 <<'PY'
-          import struct, zlib, math, os
+          import struct, zlib, math
 
-          W, H = 1024, 768
+          W,H = 1024,768
 
-          def chunk(t, d):
-              return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t+d) & 0xffffffff)
+          def chunk(t,d):
+              return struct.pack(">I",len(d))+t+d+struct.pack(">I",zlib.crc32(t+d)&0xffffffff)
 
           def save_png(path, rows):
-              raw = b"".join(b"\x00" + bytes(row) for row in rows)
-              data = b"\x89PNG\r\n\x1a\n"
-              data += chunk(b"IHDR", struct.pack(">IIBBBBB", W, H, 8, 2, 0, 0, 0))
-              data += chunk(b"IDAT", zlib.compress(raw, 9))
-              data += chunk(b"IEND", b"")
-              open(path, "wb").write(data)
+              raw=b"".join(b"\x00"+bytes(row) for row in rows)
+              data=b"\x89PNG\r\n\x1a\n"
+              data+=chunk(b"IHDR",struct.pack(">IIBBBBB",W,H,8,2,0,0,0))
+              data+=chunk(b"IDAT",zlib.compress(raw,9))
+              data+=chunk(b"IEND",b"")
+              open(path,"wb").write(data)
 
-          rows = []
+          rows=[]
           for y in range(H):
-              row = bytearray()
+              row=bytearray()
               for x in range(W):
-                  nx, ny = x/W, y/H
+                  nx,ny=x/W,y/H
 
-                  r = int(226 + 18*nx - 16*ny)
-                  g = int(242 + 10*math.sin(nx*5) - 8*ny)
-                  b = int(248 + 18*math.cos(ny*4))
+                  r=int(235 + 12*nx - 10*ny)
+                  g=int(248 + 5*math.sin(nx*4) - 6*ny)
+                  b=int(252 + 8*math.cos(ny*5))
 
-                  # blue liquid wave
-                  curve = 0.58 + 0.08*math.sin(nx*6)
-                  glow = max(0, 1 - abs(ny-curve)*10)
-                  r += int(glow*12)
-                  g += int(glow*24)
-                  b += int(glow*32)
+                  dx,dy=nx-0.22,ny-0.18
+                  blue=max(0,1-math.sqrt(dx*dx+dy*dy)*2.4)
+                  r-=int(blue*18)
+                  g+=int(blue*10)
+                  b+=int(blue*28)
 
-                  # champagne glow
-                  dx, dy = nx-0.78, ny-0.72
-                  h = max(0, 1 - math.sqrt(dx*dx+dy*dy)*2.2)
-                  r += int(h*38)
-                  g += int(h*26)
-                  b += int(h*4)
+                  dx,dy=nx-0.80,ny-0.75
+                  gold=max(0,1-math.sqrt(dx*dx+dy*dy)*2.2)
+                  r+=int(gold*34)
+                  g+=int(gold*22)
+                  b+=int(gold*3)
 
-                  # vignette
-                  vx, vy = nx-0.5, ny-0.5
-                  v = math.sqrt(vx*vx+vy*vy)
-                  r -= int(v*28)
-                  g -= int(v*18)
-                  b -= int(v*10)
+                  curve=0.62+0.08*math.sin(nx*6)
+                  glow=max(0,1-abs(ny-curve)*10)
+                  r+=int(glow*18)
+                  g+=int(glow*28)
+                  b+=int(glow*35)
 
-                  row += bytes((max(0,min(255,r)), max(0,min(255,g)), max(0,min(255,b))))
+                  # NL letters, simple block logo
+                  logo=False
+                  # N
+                  if 410 < x < 445 and 300 < y < 470: logo=True
+                  if 515 < x < 550 and 300 < y < 470: logo=True
+                  if 445 <= x <= 515 and 300 < y < 470:
+                      expected=300+(x-445)*170/70
+                      if abs(y-expected)<18: logo=True
+                  # L
+                  if 585 < x < 620 and 300 < y < 470: logo=True
+                  if 585 < x < 705 and 435 < y < 470: logo=True
+
+                  if logo:
+                      r,g,b = 16,24,32
+
+                  row += bytes((max(0,min(255,r)),max(0,min(255,g)),max(0,min(255,b))))
               rows.append(row)
 
-          save_png("boot-assets/nlos-boot.png", rows)
+          save_png("boot-assets/nl-boot.png", rows)
           PY
 
       - name: Create real NL OS boot menu
         run: |
           sudo mkdir -p iso-root/boot/grub
-          sudo cp boot-assets/nlos-boot.png iso-root/boot/grub/nlos-boot.png
+          sudo cp boot-assets/nl-boot.png iso-root/boot/grub/nl-boot.png
 
           sudo tee iso-root/boot/grub/grub.cfg >/dev/null <<'GRUB'
           set default=0
-          set timeout=7
+          set timeout=5
 
-          if loadfont /boot/grub/font.pf2 ; then
-            set gfxmode=auto
-            insmod efi_gop
-            insmod efi_uga
-            insmod video_bochs
-            insmod video_cirrus
-            insmod gfxterm
-            terminal_output gfxterm
-          fi
-
+          insmod all_video
+          insmod gfxterm
           insmod png
-          background_image /boot/grub/nlos-boot.png
+          set gfxmode=auto
+          terminal_output gfxterm
 
-          set menu_color_normal=white/black
-          set menu_color_highlight=black/white
+          background_image /boot/grub/nl-boot.png
+
+          set menu_color_normal=black/white
+          set menu_color_highlight=white/black
 
           menuentry "NL OS Live" {
             linux /live/vmlinuz boot=live components quiet splash username=user hostname=nlos
             initrd /live/initrd.img
           }
 
-          menuentry "NL OS Live - safe graphics" {
+          menuentry "NL OS Live - Safe Graphics" {
             linux /live/vmlinuz boot=live components nomodeset quiet splash username=user hostname=nlos
             initrd /live/initrd.img
           }
@@ -223,50 +228,13 @@ jobs:
             initrd /live/initrd.img
           }
 
-          menuentry "NL OS Hardware Diagnostic" {
+          menuentry "NL OS Diagnostic" {
             linux /live/vmlinuz boot=live components nomodeset username=user hostname=nlos
             initrd /live/initrd.img
           }
           GRUB
 
-          sudo mkdir -p iso-root/isolinux
-          sudo cp boot-assets/nlos-boot.png iso-root/isolinux/nlos-boot.png || true
-
-          sudo tee iso-root/isolinux/isolinux.cfg >/dev/null <<'ISO'
-          UI vesamenu.c32
-          PROMPT 0
-          TIMEOUT 70
-          DEFAULT live
-
-          MENU TITLE NL OS Lite Alpha 5
-          MENU BACKGROUND nlos-boot.png
-          MENU COLOR border 0 #00000000 #00000000 none
-          MENU COLOR title 0 #ffffffff #00000000 none
-          MENU COLOR sel 0 #ff111111 #ffffffff none
-          MENU COLOR unsel 0 #ffffffff #00000000 none
-
-          LABEL live
-            MENU LABEL NL OS Live
-            KERNEL /live/vmlinuz
-            APPEND initrd=/live/initrd.img boot=live components quiet splash username=user hostname=nlos
-
-          LABEL safe
-            MENU LABEL NL OS Live - safe graphics
-            KERNEL /live/vmlinuz
-            APPEND initrd=/live/initrd.img boot=live components nomodeset quiet splash username=user hostname=nlos
-
-          LABEL install
-            MENU LABEL NL OS Installer
-            KERNEL /live/vmlinuz
-            APPEND initrd=/live/initrd.img boot=live components quiet splash username=user hostname=nlos
-
-          LABEL diagnostic
-            MENU LABEL NL OS Hardware Diagnostic
-            KERNEL /live/vmlinuz
-            APPEND initrd=/live/initrd.img boot=live components nomodeset username=user hostname=nlos
-          ISO
-
-          sudo find iso-root -type f \( -name "*.cfg" -o -name "*.txt" \) -exec sed -i 's/Debian GNU\/Linux/NL OS Lite Alpha 5/g; s/Debian Live/NL OS Lite Alpha 5/g; s/debian/NLOS/g; s/Debian/NL OS/g' {} \; || true
+          sudo find iso-root -type f \( -name "*.cfg" -o -name "*.txt" \) -exec sed -i 's/Debian GNU\/Linux/NL OS/g; s/Debian Live/NL OS/g; s/debian/NL OS/g; s/Debian/NL OS/g' {} \; || true
 
       - name: Repack filesystem
         run: |
@@ -278,8 +246,8 @@ jobs:
         run: |
           cd iso-root
           sudo xorriso -as mkisofs \
-            -r -V "NLOS_LITE_A5" \
-            -o ../NLOS-Lite-Alpha-5.iso \
+            -r -V "NL_OS_FULL" \
+            -o ../NL-OS-Full-Redesign.iso \
             -J -joliet-long \
             -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
             -partition_offset 16 \
@@ -292,8 +260,8 @@ jobs:
             -isohybrid-gpt-basdat \
             .
 
-      - name: Upload NL OS Alpha 5 ISO
+      - name: Upload NL OS ISO
         uses: actions/upload-artifact@v4
         with:
-          name: NLOS-Lite-Alpha-5
-          path: NLOS-Lite-Alpha-5.iso
+          name: NL-OS-Full-Redesign
+          path: NL-OS-Full-Redesign.iso

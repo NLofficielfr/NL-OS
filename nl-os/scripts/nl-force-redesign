@@ -1,0 +1,319 @@
+#!/bin/bash
+
+echo "Applying full NL OS redesign..."
+
+mkdir -p "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml"
+mkdir -p "$HOME/.config/gtk-3.0"
+mkdir -p "$HOME/.config/autostart"
+mkdir -p "$HOME/.local/share/applications"
+mkdir -p "$HOME/Pictures/NL-OS"
+mkdir -p "$HOME/Desktop"
+
+# Wallpaper NL OS premium clair
+cat > "$HOME/Pictures/NL-OS/nl-os-premium-wallpaper.svg" <<'SVG'
+<svg width="1920" height="1080" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#eefaff"/>
+      <stop offset="42%" stop-color="#fbfdff"/>
+      <stop offset="100%" stop-color="#e9f1f7"/>
+    </linearGradient>
+
+    <radialGradient id="blueGlow" cx="22%" cy="18%" r="75%">
+      <stop offset="0%" stop-color="#7fddf7" stop-opacity="0.70"/>
+      <stop offset="100%" stop-color="#7fddf7" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="goldGlow" cx="82%" cy="78%" r="58%">
+      <stop offset="0%" stop-color="#d9c18a" stop-opacity="0.42"/>
+      <stop offset="100%" stop-color="#d9c18a" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="soft">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <rect width="1920" height="1080" fill="url(#blueGlow)"/>
+  <rect width="1920" height="1080" fill="url(#goldGlow)"/>
+
+  <path d="M-200 670 C 240 510, 560 780, 980 565 S 1600 430, 2140 620"
+        fill="none" stroke="#ffffff" stroke-width="28" stroke-opacity="0.55" filter="url(#soft)"/>
+
+  <path d="M-200 735 C 260 590, 610 835, 1040 650 S 1600 520, 2140 700"
+        fill="none" stroke="#77d8ee" stroke-width="16" stroke-opacity="0.35" filter="url(#soft)"/>
+
+  <path d="M260 200 C 620 80, 820 320, 1160 180 S 1540 140, 1830 300"
+        fill="none" stroke="#d9c18a" stroke-width="12" stroke-opacity="0.22" filter="url(#soft)"/>
+
+  <text x="960" y="558"
+        text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="132"
+        font-weight="900"
+        fill="#101820"
+        fill-opacity="0.075">NL</text>
+
+  <text x="960" y="625"
+        text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="24"
+        font-weight="600"
+        fill="#101820"
+        fill-opacity="0.22">NL OS</text>
+</svg>
+SVG
+
+# GTK plus rond
+cat > "$HOME/.config/gtk-3.0/gtk.css" <<'CSS'
+* {
+  font-family: Sans;
+}
+
+window,
+dialog,
+.background {
+  background-color: #f7fcff;
+  color: #101820;
+}
+
+button {
+  background-image: none;
+  background-color: rgba(255,255,255,0.96);
+  color: #101820;
+  border-radius: 22px;
+  border: 1px solid rgba(165,205,222,0.90);
+  padding: 9px 16px;
+}
+
+button:hover {
+  background-color: #eaf8ff;
+  border-color: rgba(90,190,225,0.95);
+}
+
+entry {
+  background-color: rgba(255,255,255,0.98);
+  color: #101820;
+  border-radius: 18px;
+  border: 1px solid rgba(165,205,222,0.90);
+  padding: 9px;
+}
+
+menubar,
+menu,
+.menu {
+  background-color: rgba(255,255,255,0.97);
+  color: #101820;
+  border-radius: 16px;
+}
+
+tooltip {
+  background-color: rgba(255,255,255,0.97);
+  color: #101820;
+  border-radius: 14px;
+}
+CSS
+
+# XFCE settings
+cat > "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml" <<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xsettings" version="1.0">
+  <property name="Net" type="empty">
+    <property name="ThemeName" type="string" value="Adwaita"/>
+    <property name="IconThemeName" type="string" value="Adwaita"/>
+  </property>
+  <property name="Xft" type="empty">
+    <property name="DPI" type="int" value="96"/>
+    <property name="Antialias" type="int" value="1"/>
+    <property name="Hinting" type="int" value="1"/>
+    <property name="HintStyle" type="string" value="hintslight"/>
+  </property>
+</channel>
+XML
+
+# Wallpaper + plus aucune icône bureau
+cat > "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml" <<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfce4-desktop" version="1.0">
+  <property name="backdrop" type="empty">
+    <property name="screen0" type="empty">
+      <property name="monitor0" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="last-image" type="string" value="$HOME/Pictures/NL-OS/nl-os-premium-wallpaper.svg"/>
+          <property name="image-style" type="int" value="5"/>
+        </property>
+      </property>
+      <property name="monitorVirtual1" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="last-image" type="string" value="$HOME/Pictures/NL-OS/nl-os-premium-wallpaper.svg"/>
+          <property name="image-style" type="int" value="5"/>
+        </property>
+      </property>
+      <property name="monitorVirtual-1" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="last-image" type="string" value="$HOME/Pictures/NL-OS/nl-os-premium-wallpaper.svg"/>
+          <property name="image-style" type="int" value="5"/>
+        </property>
+      </property>
+    </property>
+  </property>
+
+  <property name="desktop-icons" type="empty">
+    <property name="style" type="int" value="0"/>
+    <property name="file-icons" type="empty">
+      <property name="show-home" type="bool" value="false"/>
+      <property name="show-filesystem" type="bool" value="false"/>
+      <property name="show-trash" type="bool" value="false"/>
+      <property name="show-removable" type="bool" value="false"/>
+    </property>
+  </property>
+</channel>
+XML
+
+# Fenêtres : boutons gauche type Apple
+cat > "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml" <<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfwm4" version="1.0">
+  <property name="general" type="empty">
+    <property name="theme" type="string" value="Default"/>
+    <property name="button_layout" type="string" value="O|HMC"/>
+    <property name="title_font" type="string" value="Sans Bold 10"/>
+    <property name="show_frame_shadow" type="bool" value="true"/>
+    <property name="borderless_maximize" type="bool" value="true"/>
+  </property>
+</channel>
+XML
+
+# Barre haut + dock bas
+cat > "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml" <<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfce4-panel" version="1.0">
+  <property name="configver" type="int" value="2"/>
+
+  <property name="panels" type="array">
+    <value type="int" value="1"/>
+    <value type="int" value="2"/>
+
+    <property name="panel-1" type="empty">
+      <property name="position" type="string" value="p=6;x=960;y=16"/>
+      <property name="length" type="uint" value="100"/>
+      <property name="size" type="uint" value="34"/>
+      <property name="mode" type="uint" value="0"/>
+      <property name="background-style" type="uint" value="1"/>
+      <property name="background-rgba" type="array">
+        <value type="double" value="0.97"/>
+        <value type="double" value="0.99"/>
+        <value type="double" value="1.00"/>
+        <value type="double" value="0.82"/>
+      </property>
+      <property name="plugin-ids" type="array">
+        <value type="int" value="1"/>
+        <value type="int" value="2"/>
+        <value type="int" value="3"/>
+        <value type="int" value="4"/>
+        <value type="int" value="5"/>
+      </property>
+    </property>
+
+    <property name="panel-2" type="empty">
+      <property name="position" type="string" value="p=10;x=960;y=1036"/>
+      <property name="length" type="uint" value="30"/>
+      <property name="size" type="uint" value="74"/>
+      <property name="mode" type="uint" value="0"/>
+      <property name="background-style" type="uint" value="1"/>
+      <property name="background-rgba" type="array">
+        <value type="double" value="0.98"/>
+        <value type="double" value="0.98"/>
+        <value type="double" value="0.96"/>
+        <value type="double" value="0.88"/>
+      </property>
+      <property name="plugin-ids" type="array">
+        <value type="int" value="6"/>
+        <value type="int" value="7"/>
+        <value type="int" value="8"/>
+        <value type="int" value="9"/>
+        <value type="int" value="10"/>
+        <value type="int" value="11"/>
+      </property>
+    </property>
+  </property>
+
+  <property name="plugins" type="empty">
+    <property name="plugin-1" type="string" value="applicationsmenu">
+      <property name="button-title" type="string" value="NL OS"/>
+      <property name="show-button-title" type="bool" value="true"/>
+    </property>
+
+    <property name="plugin-2" type="string" value="separator">
+      <property name="expand" type="bool" value="true"/>
+      <property name="style" type="uint" value="0"/>
+    </property>
+
+    <property name="plugin-3" type="string" value="systray"/>
+    <property name="plugin-4" type="string" value="pulseaudio"/>
+    <property name="plugin-5" type="string" value="clock">
+      <property name="digital-format" type="string" value="%a %d %b  %H:%M"/>
+    </property>
+
+    <property name="plugin-6" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="exo-file-manager.desktop"/>
+      </property>
+    </property>
+
+    <property name="plugin-7" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="firefox-esr.desktop"/>
+      </property>
+    </property>
+
+    <property name="plugin-8" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="xfce4-terminal.desktop"/>
+      </property>
+    </property>
+
+    <property name="plugin-9" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="xfce-settings-manager.desktop"/>
+      </property>
+    </property>
+
+    <property name="plugin-10" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="nl-control.desktop"/>
+      </property>
+    </property>
+
+    <property name="plugin-11" type="string" value="showdesktop"/>
+  </property>
+</channel>
+XML
+
+# NL Control shortcut
+cat > "$HOME/.local/share/applications/nl-control.desktop" <<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=NL Control
+Exec=nl-control
+Icon=preferences-system
+Terminal=false
+Categories=System;
+DESKTOP
+
+# Nettoyage brutal des icônes Debian visibles
+rm -f "$HOME/Desktop/Install Debian.desktop" 2>/dev/null || true
+rm -f "$HOME/Desktop/install-debian.desktop" 2>/dev/null || true
+rm -f "$HOME/Desktop/Install*.desktop" 2>/dev/null || true
+rm -f "$HOME/Desktop/Debian*.desktop" 2>/dev/null || true
+rm -f "$HOME/Desktop/NLOS Dashboard.desktop" 2>/dev/null || true
+
+# Orientation normale
+xrandr -o normal 2>/dev/null || true
+
+# Restart UI
+xfdesktop --reload >/dev/null 2>&1 || true
+xfce4-panel --restart >/dev/null 2>&1 || true
+
+echo "Full NL OS redesign applied."

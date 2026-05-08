@@ -56,6 +56,9 @@ jobs:
           sudo cp nl-os/scripts/nlos-shell squashfs-root/usr/local/bin/nlos-shell
           sudo chmod +x squashfs-root/usr/local/bin/nlos-shell
 
+          sudo cp nl-os/scripts/nlos-apply-real-design squashfs-root/usr/local/bin/nlos-apply-real-design
+          sudo chmod +x squashfs-root/usr/local/bin/nlos-apply-real-design
+
           if [ -f nl-os/scripts/nlos-boost ]; then
             sudo cp nl-os/scripts/nlos-boost squashfs-root/usr/local/bin/nlos-boost
             sudo chmod +x squashfs-root/usr/local/bin/nlos-boost
@@ -93,13 +96,13 @@ jobs:
           sudo mkdir -p squashfs-root/etc/skel/.config/autostart
           sudo mkdir -p squashfs-root/etc/skel/Desktop
 
-          sudo tee squashfs-root/etc/skel/.config/autostart/nlos-shell.desktop >/dev/null <<'DESKTOP'
+          sudo tee squashfs-root/etc/skel/.config/autostart/nlos-apply-real-design.desktop >/dev/null <<'DESKTOP'
           [Desktop Entry]
           Type=Application
-          Name=NL Shell
-          Exec=nlos-shell
+          Name=Apply NL OS Real Design
+          Exec=nlos-apply-real-design
           Hidden=false
-          NoDisplay=false
+          NoDisplay=true
           X-GNOME-Autostart-enabled=true
           DESKTOP
 

@@ -1,75 +1,23 @@
 #!/bin/bash
-
 MODE="$1"
 
-if [ -z "$MODE" ]; then
-  echo "NL Boost"
-  echo ""
-  echo "Usage:"
-  echo "  nl-boost normal"
-  echo "  nl-boost performance"
-  echo "  nl-boost gaming"
-  echo "  nl-boost old-machine"
-  echo "  nl-boost battery"
-  exit 0
+if [ "$EUID" -ne 0 ]; then
+  echo "Lance avec sudo."
+  exit 1
 fi
 
-need_root() {
-  if [ "$EUID" -ne 0 ]; then
-    echo "Lance avec sudo."
-    exit 1
-  fi
-}
-
-common() {
-  sysctl -w vm.vfs_cache_pressure=50 >/dev/null 2>&1 || true
-  sysctl -w kernel.sched_autogroup_enabled=1 >/dev/null 2>&1 || true
-}
-
 case "$MODE" in
-  normal)
-    need_root
-    echo "NL OS : mode normal."
-    common
-    sysctl -w vm.swappiness=10 >/dev/null 2>&1 || true
-    ;;
-
   performance)
-    need_root
-    echo "NL OS : mode performance."
-    common
     sysctl -w vm.swappiness=5 >/dev/null 2>&1 || true
-    sysctl -w vm.dirty_ratio=10 >/dev/null 2>&1 || true
-    sysctl -w vm.dirty_background_ratio=5 >/dev/null 2>&1 || true
+    sysctl -w vm.vfs_cache_pressure=50 >/dev/null 2>&1 || true
+    echo "Mode performance NL activé."
     ;;
-
   gaming)
-    need_root
-    echo "NL OS : mode gaming."
-    common
     sysctl -w vm.swappiness=5 >/dev/null 2>&1 || true
-    sysctl -w kernel.sched_child_runs_first=0 >/dev/null 2>&1 || true
+    sysctl -w kernel.sched_autogroup_enabled=1 >/dev/null 2>&1 || true
+    echo "Mode gaming NL activé."
     ;;
-
-  old-machine)
-    need_root
-    echo "NL OS : mode vieille machine."
-    common
-    sysctl -w vm.swappiness=20 >/dev/null 2>&1 || true
-    sysctl -w vm.dirty_ratio=8 >/dev/null 2>&1 || true
-    sysctl -w vm.dirty_background_ratio=3 >/dev/null 2>&1 || true
-    ;;
-
-  battery)
-    need_root
-    echo "NL OS : mode économie."
-    sysctl -w vm.swappiness=30 >/dev/null 2>&1 || true
-    ;;
-
   *)
-    echo "Mode inconnu."
-    exit 1
+    echo "Modes : performance, gaming"
     ;;
 esac
-
-echo "Mode appliqué : $MODE"

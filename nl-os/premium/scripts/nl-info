@@ -1,0 +1,30 @@
+#!/bin/bash
+
+echo "======================================"
+echo "              NL OS INFO"
+echo "======================================"
+echo ""
+
+echo "Version : NL OS Premium Alpha 1"
+echo "Base    : Linux Debian KDE"
+echo "Edition : Premium"
+echo ""
+
+echo "Système :"
+uname -a
+echo ""
+
+echo "CPU :"
+lscpu 2>/dev/null | grep -E "Architecture|Model name|CPU\(s\)" || true
+echo ""
+
+echo "Mémoire :"
+free -h || true
+echo ""
+
+echo "Disques :"
+lsblk || true
+echo ""
+
+echo "GPU :"
+lspci 2>/dev/null | grep -Ei "vga|3d|display" || echo "GPU non détecté."

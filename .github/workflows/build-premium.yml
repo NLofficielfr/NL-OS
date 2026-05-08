@@ -1,0 +1,242 @@
+name: Build NL OS Premium Alpha 1
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ISO tools
+        run: |
+          sudo apt update
+          sudo apt install -y curl wget xorriso squashfs-tools rsync isolinux syslinux-common syslinux-utils python3
+
+      - name: Download latest Debian KDE Live ISO
+        run: |
+          PAGE="https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/"
+          ISO_NAME=$(curl -fsSL "$PAGE" | grep -o 'debian-live-[^"]*-amd64-kde.iso' | head -n 1)
+          echo "ISO=$ISO_NAME"
+          test -n "$ISO_NAME"
+          wget -O debian-kde-live.iso "$PAGE/$ISO_NAME"
+
+      - name: Extract ISO
+        run: |
+          mkdir iso-root
+          xorriso -osirrox on -indev debian-kde-live.iso -extract / iso-root
+          chmod -R u+w iso-root
+
+      - name: Extract filesystem
+        run: |
+          sudo unsquashfs -d squashfs-root iso-root/live/filesystem.squashfs
+
+      - name: Fix APT sources
+        run: |
+          sudo rm -f squashfs-root/etc/apt/sources.list
+          sudo mkdir -p squashfs-root/etc/apt/sources.list.d
+
+          sudo tee squashfs-root/etc/apt/sources.list >/dev/null <<'APT'
+          deb http://deb.debian.org/debian trixie main contrib non-free non-free-firmware
+          deb http://security.debian.org/debian-security trixie-security main contrib non-free non-free-firmware
+          deb http://deb.debian.org/debian trixie-updates main contrib non-free non-free-firmware
+          APT
+
+          sudo find squashfs-root/etc/apt/sources.list.d -type f -name "*.list" -delete || true
+          sudo cp /etc/resolv.conf squashfs-root/etc/resolv.conf
+
+      - name: Install premium packages
+        run: |
+          sudo mount --bind /dev squashfs-root/dev
+          sudo mount --bind /proc squashfs-root/proc
+          sudo mount --bind /sys squashfs-root/sys
+
+          sudo chroot squashfs-root /bin/bash -c "
+            apt clean
+            apt update
+            apt install -y python3-pyqt5 gamemode mangohud htop preload curl
+          "
+
+          sudo umount -lf squashfs-root/dev || true
+          sudo umount -lf squashfs-root/proc || true
+          sudo umount -lf squashfs-root/sys || true
+
+      - name: Add NL OS Premium files
+        run: |
+          sudo mkdir -p squashfs-root/opt/nl-os/premium
+          sudo cp -R nl-os/premium/* squashfs-root/opt/nl-os/premium/
+
+          sudo mkdir -p squashfs-root/usr/local/bin
+
+          sudo cp nl-os/premium/scripts/nl-control squashfs-root/usr/local/bin/nl-control
+          sudo cp nl-os/premium/scripts/nl-boost squashfs-root/usr/local/bin/nl-boost
+          sudo cp nl-os/premium/scripts/nl-game-run squashfs-root/usr/local/bin/nl-game-run
+          sudo cp nl-os/premium/scripts/nl-info squashfs-root/usr/local/bin/nl-info
+          sudo cp nl-os/premium/scripts/nl-premium-init squashfs-root/usr/local/bin/nl-premium-init
+
+          sudo chmod +x squashfs-root/usr/local/bin/nl-control
+          sudo chmod +x squashfs-root/usr/local/bin/nl-boost
+          sudo chmod +x squashfs-root/usr/local/bin/nl-game-run
+          sudo chmod +x squashfs-root/usr/local/bin/nl-info
+          sudo chmod +x squashfs-root/usr/local/bin/nl-premium-init
+
+      - name: Configure NL OS Premium user session
+        run: |
+          sudo mkdir -p squashfs-root/etc/skel/.config/autostart
+          sudo mkdir -p squashfs-root/etc/skel/.local/share/applications
+          sudo mkdir -p squashfs-root/etc/skel/Desktop
+
+          sudo tee squashfs-root/etc/skel/.config/autostart/nl-premium-init.desktop >/dev/null <<'DESKTOP'
+          [Desktop Entry]
+          Type=Application
+          Name=NL Premium Init
+          Exec=nl-premium-init
+          Hidden=false
+          NoDisplay=true
+          X-GNOME-Autostart-enabled=true
+          DESKTOP
+
+          sudo tee squashfs-root/etc/skel/Desktop/NL-Control.desktop >/dev/null <<'DESKTOP'
+          [Desktop Entry]
+          Type=Application
+          Name=NL Control
+          Exec=nl-control
+          Icon=preferences-system
+          Terminal=false
+          Categories=System;
+          DESKTOP
+
+          sudo chmod +x squashfs-root/etc/skel/Desktop/NL-Control.desktop
+
+          sudo tee squashfs-root/etc/hostname >/dev/null <<'HOST'
+          nlos-premium
+          HOST
+
+          sudo tee squashfs-root/etc/issue >/dev/null <<'ISSUE'
+          NL OS Premium Alpha 1 \n \l
+          ISSUE
+
+      - name: Generate NL OS boot background
+        run: |
+          mkdir -p boot-assets
+
+          python3 <<'PY'
+          import struct, zlib, math
+
+          W, H = 1024, 768
+
+          def chunk(t, d):
+              return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t+d) & 0xffffffff)
+
+          def save_png(path, rows):
+              raw = b"".join(b"\x00" + bytes(row) for row in rows)
+              data = b"\x89PNG\r\n\x1a\n"
+              data += chunk(b"IHDR", struct.pack(">IIBBBBB", W, H, 8, 2, 0, 0, 0))
+              data += chunk(b"IDAT", zlib.compress(raw, 9))
+              data += chunk(b"IEND", b"")
+              open(path, "wb").write(data)
+
+          rows = []
+          for y in range(H):
+              row = bytearray()
+              for x in range(W):
+                  nx, ny = x/W, y/H
+                  r = int(228 + 18*nx - 12*ny)
+                  g = int(244 + 8*math.sin(nx*4) - 6*ny)
+                  b = int(250 + 12*math.cos(ny*5))
+
+                  curve = 0.60 + 0.07*math.sin(nx*6)
+                  glow = max(0, 1 - abs(ny-curve)*10)
+                  r += int(glow*15)
+                  g += int(glow*25)
+                  b += int(glow*35)
+
+                  dx, dy = nx-0.80, ny-0.72
+                  h = max(0, 1 - math.sqrt(dx*dx+dy*dy)*2.2)
+                  r += int(h*38)
+                  g += int(h*24)
+                  b += int(h*4)
+
+                  row += bytes((max(0,min(255,r)), max(0,min(255,g)), max(0,min(255,b))))
+              rows.append(row)
+
+          save_png("boot-assets/nl-os-boot.png", rows)
+          PY
+
+      - name: Create real NL OS Premium boot menu
+        run: |
+          sudo mkdir -p iso-root/boot/grub
+          sudo cp boot-assets/nl-os-boot.png iso-root/boot/grub/nl-os-boot.png
+
+          sudo tee iso-root/boot/grub/grub.cfg >/dev/null <<'GRUB'
+          set default=0
+          set timeout=6
+
+          insmod all_video
+          insmod gfxterm
+          insmod png
+          set gfxmode=auto
+          terminal_output gfxterm
+
+          background_image /boot/grub/nl-os-boot.png
+
+          set menu_color_normal=white/black
+          set menu_color_highlight=black/white
+
+          menuentry "NL OS Premium Live" {
+            linux /live/vmlinuz boot=live components quiet splash username=user hostname=nlos-premium
+            initrd /live/initrd.img
+          }
+
+          menuentry "NL OS Premium Live - Safe Graphics" {
+            linux /live/vmlinuz boot=live components nomodeset quiet splash username=user hostname=nlos-premium
+            initrd /live/initrd.img
+          }
+
+          menuentry "NL OS Premium Installer" {
+            linux /live/vmlinuz boot=live components quiet splash username=user hostname=nlos-premium
+            initrd /live/initrd.img
+          }
+
+          menuentry "NL OS Hardware Diagnostic" {
+            linux /live/vmlinuz boot=live components nomodeset username=user hostname=nlos-premium
+            initrd /live/initrd.img
+          }
+          GRUB
+
+          sudo find iso-root -type f \( -name "*.cfg" -o -name "*.txt" \) -exec sed -i 's/Debian GNU\/Linux/NL OS Premium/g; s/Debian Live/NL OS Premium/g; s/debian/NL OS/g; s/Debian/NL OS/g' {} \; || true
+
+      - name: Repack filesystem
+        run: |
+          sudo rm -f iso-root/live/filesystem.squashfs
+          sudo mksquashfs squashfs-root iso-root/live/filesystem.squashfs -comp xz
+          sudo du -sx --block-size=1 squashfs-root | cut -f1 | sudo tee iso-root/live/filesystem.size
+
+      - name: Build bootable ISO
+        run: |
+          cd iso-root
+          sudo xorriso -as mkisofs \
+            -r -V "NLOS_PREMIUM_A1" \
+            -o ../NL-OS-Premium-Alpha-1.iso \
+            -J -joliet-long \
+            -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
+            -partition_offset 16 \
+            -b isolinux/isolinux.bin \
+            -c isolinux/boot.cat \
+            -no-emul-boot -boot-load-size 4 -boot-info-table \
+            -eltorito-alt-boot \
+            -e boot/grub/efi.img \
+            -no-emul-boot \
+            -isohybrid-gpt-basdat \
+            .
+
+      - name: Upload NL OS Premium ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: NL-OS-Premium-Alpha-1
+          path: NL-OS-Premium-Alpha-1.iso

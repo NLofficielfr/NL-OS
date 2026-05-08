@@ -1,94 +1,81 @@
-NLOS Lite Alpha 4
+NL OS
 
-NLOS est un projet expérimental de système d’exploitation léger basé sur Linux.
+NL OS est un projet expérimental de système d’exploitation basé sur Linux.
 
-L’objectif est de créer un système bootable, propre, rapide et visuellement moderne, capable de fonctionner sur des machines modestes tout en proposant des modes d’optimisation simples.
+Le projet contient deux éditions.
 
-Cette version est une Alpha. Elle sert à tester la base technique, l’interface NLOS Center et les premiers outils système.
+NL OS Premium
 
-Objectifs
+Édition principale, plus belle et plus complète.
 
-NLOS vise à proposer :
+Objectifs :
 
-- une base Linux légère ;
-- une interface plus propre qu’un Linux classique ;
-- un mode Live USB ;
-- des outils d’optimisation ;
-- un mode performance ;
-- un mode gaming ;
-- un mode old machine ;
-- une structure claire pour développer un vrai shell NLOS plus tard.
+- interface moderne ;
+- design rond ;
+- expérience simple ;
+- mode performance ;
+- mode gaming ;
+- mode vieille machine ;
+- centre de contrôle NL ;
+- boot menu NL ;
+- branding NL ;
+- aucune interface Ubuntu.
 
-Compatibilité
+NL OS Premium utilise une base Linux Debian KDE. Debian sert de moteur technique. L’expérience visible doit être NL OS.
 
-Cette ISO est destinée aux machines amd64 / x86_64.
+NL OS Lite
 
-Elle peut fonctionner sur beaucoup de PC et de Mac Intel.
+Édition future plus légère pour machines très anciennes.
 
-Elle n’est pas compatible avec les anciens Mac PowerPC comme certains iMac G4 sans créer une version PowerPC séparée.
+Objectifs :
 
-Fonctionnalités actuelles
+- démarrage rapide ;
+- faible consommation RAM ;
+- compatibilité vieux PC et vieux Mac Intel ;
+- interface plus simple ;
+- optimisations système.
 
-- Base Debian Live XFCE.
-- ISO bootable générée avec GitHub Actions.
-- NLOS Center en HTML/CSS.
-- Commande nlos-boost.
-- Commande nlos-game-run.
-- Commande nlos-info.
-- Mode Live USB.
-- Premiers éléments visuels NLOS.
+Commandes NL OS
 
-Commandes utiles
+nl-control
 
-Afficher les informations système :
+Ouvre le centre de contrôle NL.
 
-nlos-info
+nl-info
 
-Activer le mode performance :
+Affiche les informations système.
 
-sudo nlos-boost performance
+sudo nl-boost performance
 
-Activer le mode gaming :
+Active le mode performance.
 
-sudo nlos-boost gaming
+sudo nl-boost gaming
 
-Activer le mode vieux Mac / machine faible :
+Active le mode gaming.
 
-sudo nlos-boost oldmac
+sudo nl-boost old-machine
 
-Lancer un jeu avec les variables d’optimisation :
+Active le mode vieille machine.
 
-nlos-game-run commande_du_jeu
+nl-game-run commande
 
-Ouvrir le centre NLOS :
+Lance un jeu avec les réglages gaming NL OS.
 
-nlos-center
+État du projet
 
-Limites
+NL OS Premium Alpha 1 est une première version de travail.
 
-NLOS Alpha 4 n’est pas encore un OS final.
+Elle n’est pas encore finale, mais elle pose la nouvelle direction :
 
-Le système reste basé sur Debian Live XFCE. Certains éléments Debian peuvent encore apparaître.
+- plus de dashboard HTML ;
+- plus de surcouche inutile ;
+- apps NL natives ;
+- interface KDE modifiée ;
+- boot NL OS ;
+- système simple et premium.
 
-Le mode gaming améliore l’environnement d’exécution, mais ne rend pas tous les jeux compatibles automatiquement. Les jeux Windows peuvent nécessiter Wine, Proton, DXVK ou des pilotes adaptés. Les jeux macOS natifs ne sont pas compatibles directement avec Linux.
+Avertissement
 
-Roadmap
+NL OS est expérimental.
 
-Alpha 5 :
-
-- meilleur thème visuel ;
-- suppression plus complète du branding Debian ;
-- icônes NLOS ;
-- bureau plus propre ;
-- meilleur démarrage ;
-- optimisations matérielles automatiques.
-
-Alpha 6 :
-
-- vrai shell NLOS ;
-- centre de contrôle natif ;
-- assistant système ;
-- meilleure gestion des profils de performance ;
-- interface plus proche d’un OS moderne.
-
-NLOS est une base expérimentale qui évolue progressivement vers un OS léger, clair et personnel.
+Ne pas utiliser comme système principal pour le moment.

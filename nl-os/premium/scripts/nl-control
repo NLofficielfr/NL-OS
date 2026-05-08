@@ -1,0 +1,2 @@
+#!/bin/bash
+python3 /opt/nl-os/premium/apps/nl-control.py

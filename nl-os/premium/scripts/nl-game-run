@@ -1,0 +1,27 @@
+#!/bin/bash
+
+if [ "$#" -eq 0 ]; then
+  echo "NL Game Run"
+  echo ""
+  echo "Usage:"
+  echo "  nl-game-run commande_du_jeu"
+  echo ""
+  echo "Exemples:"
+  echo "  nl-game-run ./jeu-linux"
+  echo "  nl-game-run wine jeu.exe"
+  exit 0
+fi
+
+export WINEDEBUG=-all
+export MESA_GLTHREAD=true
+export __GL_THREADED_OPTIMIZATIONS=1
+export vblank_mode=0
+export DXVK_LOG_LEVEL=none
+export VKD3D_DEBUG=none
+export PULSE_LATENCY_MSEC=60
+
+if command -v gamemoderun >/dev/null 2>&1; then
+  exec gamemoderun "$@"
+else
+  exec "$@"
+fi

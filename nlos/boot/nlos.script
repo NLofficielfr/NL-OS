@@ -1,0 +1,58 @@
+Window.SetBackgroundTopColor(0.0, 0.0, 0.0);
+Window.SetBackgroundBottomColor(0.0, 0.0, 0.0);
+
+screen_w = Window.GetWidth();
+screen_h = Window.GetHeight();
+
+logo_image = Image("logo.png");
+logo_width = logo_image.GetWidth();
+logo_height = logo_image.GetHeight();
+
+# Logo fixe, centré
+logo = Sprite(logo_image);
+logo.SetX(screen_w / 2 - logo_width / 2);
+logo.SetY(screen_h / 2 - logo_height / 2);
+logo.SetZ(10);
+
+# Barre de chargement très discrète
+bar_bg = Image(260, 3);
+bar_bg.Fill(0.18, 0.14, 0.08, 0.35);
+bar_bg_sprite = Sprite(bar_bg);
+bar_bg_sprite.SetX(screen_w / 2 - 130);
+bar_bg_sprite.SetY(screen_h / 2 + logo_height / 2 + 56);
+bar_bg_sprite.SetZ(11);
+
+progress = 0;
+shine_x = -120;
+
+fun refresh_callback() {
+    progress++;
+    if (progress > 260) progress = 0;
+
+    shine_x += 4;
+    if (shine_x > 260) shine_x = -120;
+
+    bar = Image(260, 3);
+    bar.Fill(0.18, 0.14, 0.08, 0.22);
+
+    for (i = 0; i < progress; i++) {
+        bar.SetPixel(i, 0, 0.95, 0.68, 0.22, 0.90);
+        bar.SetPixel(i, 1, 1.00, 0.82, 0.35, 0.95);
+        bar.SetPixel(i, 2, 0.65, 0.38, 0.08, 0.80);
+    }
+
+    # Reflet discret sous forme de halo mobile sur la barre, pas sur le logo
+    for (j = 0; j < 55; j++) {
+        px = shine_x + j;
+        if (px >= 0 && px < 260) {
+            alpha = 1.0 - Math.Abs(j - 27) / 27;
+            bar.SetPixel(px, 0, 1.0, 0.92, 0.55, alpha);
+            bar.SetPixel(px, 1, 1.0, 0.95, 0.62, alpha);
+            bar.SetPixel(px, 2, 1.0, 0.82, 0.30, alpha * 0.8);
+        }
+    }
+
+    bar_bg_sprite.SetImage(bar);
+}
+
+Plymouth.SetRefreshFunction(refresh_callback);

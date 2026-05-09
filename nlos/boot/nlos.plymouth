@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=NLOS
+Description=NLOS premium boot
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/nlos
+ScriptFile=/usr/share/plymouth/themes/nlos/nlos.script
